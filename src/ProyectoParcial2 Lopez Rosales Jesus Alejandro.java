@@ -11,15 +11,12 @@ import java.util.ArrayList;
 import java.util.Random;
 
 class GameChuy extends JFrame implements KeyListener, MouseMotionListener, MouseListener {
-    private ArrayList<Shape> baseShapes;
-    private ArrayList<Bullet> bullets;
-    private ArrayList<Bullet> enemyBullets;
-    private Timer timer;
-    private Random random;
+    private final ArrayList<Shape> baseShapes;
+    private final ArrayList<Bullet> bullets;
+    private final ArrayList<Bullet> enemyBullets;
+    private final Timer timer;
+    private final Random random;
     private double rotation = 0;
-    private final int SEGMENTS = 12;
-    private final int CENTER_X = 400;
-    private final int CENTER_Y = 300;
 
     private PlayerShip player;
     private EnemyMandala boss;
@@ -50,20 +47,19 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
         random = new Random();
         player = new PlayerShip(50, 550);
         boss = new EnemyMandala(750, 50);
+        int CENTER_X = 400;
+        int CENTER_Y = 300;
         mousePosition = new Point(CENTER_X, CENTER_Y);
 
         initializeShapes();
 
-        timer = new Timer(10, new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                rotation += 0.02;
-                player.update();
-                boss.update();
-                updateBullets();
-                checkCollisions();
-                repaint();
-            }
+        timer = new Timer(10, _ -> {
+            rotation += 0.02;
+            player.update();
+            boss.update();
+            updateBullets();
+            checkCollisions();
+            repaint();
         });
         timer.start();
 
@@ -130,7 +126,6 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
 
     private void initializeSounds() {
         try {
-            // Asegúrate de que estos archivos existan en tu proyecto
             backgroundMusic = loadSound("background.wav");
             shootSound = loadSound("shoot.wav");
             explosionSound = loadSound("explosion.wav");
@@ -143,7 +138,7 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
 
     private Clip loadSound(String filename) {
         try {
-            File soundFile = new File("sounds/" + filename);
+            File soundFile = new File("src/sound/" + filename);
             AudioInputStream audioIn = AudioSystem.getAudioInputStream(soundFile);
             Clip clip = AudioSystem.getClip();
             clip.open(audioIn);
@@ -171,16 +166,21 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
         if (!gameOver) {
             if (player.health <= 0) {
                 gameOver = true;
-                backgroundMusic.stop();
+                stopGame();
                 playSound(gameOverSound);
                 showGameOverDialog(false);
             } else if (boss.health <= 0) {
                 gameOver = true;
-                backgroundMusic.stop();
+                stopGame();
                 playSound(victorySound);
                 showGameOverDialog(true);
             }
         }
+    }
+
+    private void stopGame() {
+        timer.stop();
+        backgroundMusic.stop();
     }
 
     private void showGameOverDialog(boolean victory) {
@@ -199,6 +199,7 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
             if (option == JOptionPane.YES_OPTION) {
                 restartGame();
             } else {
+                JOptionPane.showMessageDialog(this, "¡Hasta luego!");
                 System.exit(0);
             }
         });
@@ -212,6 +213,7 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
         enemyBullets.clear();
         rotation = 0;
         gameOver = false;
+        timer.start();
 
         // Reiniciar música
         backgroundMusic.setFramePosition(0);
@@ -240,6 +242,7 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
 
         for (int layer = 0; layer < 3; layer++) {
             double layerRotation = rotation * (layer % 2 == 0 ? 1 : -1);
+            int SEGMENTS = 12;
             for (int segment = 0; segment < SEGMENTS; segment++) {
                 double angle = (2 * Math.PI * segment / SEGMENTS) + layerRotation;
                 for (Shape baseShape : baseShapes) {
@@ -272,12 +275,12 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
                 i--;
             }
         }
-        for (int i = 0; i < enemyBullets.size(); i++) {
-            Bullet bullet = enemyBullets.get(i);
+        for (int j = 0; j < enemyBullets.size(); j++) {
+            Bullet bullet = enemyBullets.get(j);
             bullet.update();
             if (bullet.isOffScreen(getWidth(), getHeight())) {
-                enemyBullets.remove(i);
-                i--;
+                enemyBullets.remove(j);
+                j--;
             }
         }
     }
@@ -301,6 +304,7 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
         for (int i = 0; i < bullets.size(); i++) {
             Bullet bullet = bullets.get(i);
             if (boss.contains(bullet.x, bullet.y)) {
+                playSound(explosionSound);
                 boss.health -= 1;
                 bullets.remove(i);
                 i--;
@@ -309,6 +313,7 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
         for (int i = 0; i < enemyBullets.size(); i++) {
             Bullet bullet = enemyBullets.get(i);
             if (player.contains(bullet.x, bullet.y)) {
+                playSound(explosionSound);
                 player.health -= 5;
                 enemyBullets.remove(i);
                 i--;
@@ -317,6 +322,7 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
 
         if (boss.contains(player.x, player.y)) {
             player.health -= 10;
+            playSound(explosionSound);
         }
 
         checkGameOver();
@@ -385,7 +391,6 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
     class PlayerShip {
         private int x, y;
         private int vx, vy;
-        private final int SPEED = 5;
         public int health = 100;
 
         public PlayerShip(int x, int y) {
@@ -401,16 +406,18 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
         }
 
         public void draw(Graphics2D g2d, Point mouse) {
-            double angle = Math.atan2(mouse.y - y, mouse.x - x);
+            double angle = Math.atan2(mouse.y - y, mouse.x - x) + Math.PI / 2;
             AffineTransform originalTransform = g2d.getTransform();
             g2d.translate(x, y);
             g2d.rotate(angle);
-            g2d.setColor(Color.RED);
-            g2d.fillRect(-15, -10, 30, 20);
+
+            g2d.drawImage(new ImageIcon("src/images/ship.png").getImage(), -15, -20, 30, 40, null);
+
             g2d.setTransform(originalTransform);
         }
 
         public void keyPressed(KeyEvent e) {
+            int SPEED = 5;
             if (e.getKeyCode() == KeyEvent.VK_W) vy = -SPEED;
             if (e.getKeyCode() == KeyEvent.VK_S) vy = SPEED;
             if (e.getKeyCode() == KeyEvent.VK_A) vx = -SPEED;
@@ -435,7 +442,6 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
         public int x, y;
         public int health = 100;
         private int dx, dy;
-        private final int SPEED = 7;
 
         public EnemyMandala(int x, int y) {
             this.x = x;
@@ -454,10 +460,12 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
 
             if (random.nextDouble() < 0.01) {
                 enemyBullets.add(new Bullet(x, y, player.x, player.y));
+                playSound(shootSound);
             }
         }
 
         private void randomizeDirection() {
+            int SPEED = 7;
             dx = random.nextInt(2 * SPEED + 1) - SPEED;
             dy = random.nextInt(2 * SPEED + 1) - SPEED;
         }
@@ -468,15 +476,15 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
     }
 
 
-    class Bullet {
+    static class Bullet {
         public int x, y;
         private final int dx, dy;
-        private final int SPEED = 10;
 
         public Bullet(int startX, int startY, int targetX, int targetY) {
             x = startX;
             y = startY;
             double angle = Math.atan2(targetY - startY, targetX - startX);
+            int SPEED = 10;
             dx = (int) (SPEED * Math.cos(angle));
             dy = (int) (SPEED * Math.sin(angle));
         }
@@ -489,23 +497,25 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
         public boolean isOffScreen(int width, int height) {
             return x < 0 || x > width || y < 0 || y > height;
         }
-
-        public void draw(Graphics2D g2d) {
-            g2d.setColor(Color.YELLOW);
-            g2d.fillOval(x - 3, y - 3, 6, 6);
-        }
     }
 
     public static void main(String[] args) {
-        boolean start = JOptionPane.showConfirmDialog(null, "Bienvenido a GameChuy\n\n" +
-                        "Instrucciones:\n" +
-                        "1. Mueve la nave con las teclas W, A, S, D\n" +
-                        "2. Dispara con el clic izquierdo del mouse \napuntando al centro del jefe\n" +
-                        "3. Evita los disparos del jefe\n" +
-                        "4. No dejes que el centro del jefe te toque\n\n" +
-                        "5. Elimina al jefe antes de que te elimine\n\n" +
-                        "Presiona OK para comenzar\n\n" +
-                        "¡Buena suerte!\n\n¿Deseas comenzar?",
+        boolean start = JOptionPane.showConfirmDialog(null, """
+                        Bienvenido a GameChuy
+                        
+                        Instrucciones:
+                        1. Mueve la nave con las teclas W, A, S, D
+                        2. Dispara con el clic izquierdo del mouse\s
+                        apuntando al centro del jefe
+                        3. Evita los disparos del jefe
+                        4. No dejes que el centro del jefe te toque
+                        5. Elimina al jefe antes de que te elimine
+                        
+                        Presiona OK para comenzar
+                        
+                        ¡Buena suerte!
+                        
+                        ¿Deseas comenzar?""",
                 "GameChuy", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION;
 
         if (start) {
