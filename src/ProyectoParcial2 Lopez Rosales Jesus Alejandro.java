@@ -305,7 +305,7 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
             Bullet bullet = bullets.get(i);
             if (boss.contains(bullet.x, bullet.y)) {
                 playSound(explosionSound);
-                boss.health -= 1;
+                boss.health -= 5;
                 bullets.remove(i);
                 i--;
             }
@@ -314,7 +314,7 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
             Bullet bullet = enemyBullets.get(i);
             if (player.contains(bullet.x, bullet.y)) {
                 playSound(explosionSound);
-                player.health -= 5;
+                player.health -= 10;
                 enemyBullets.remove(i);
                 i--;
             }
@@ -458,14 +458,14 @@ class GameChuy extends JFrame implements KeyListener, MouseMotionListener, Mouse
 
             if (random.nextDouble() < 0.02) randomizeDirection();
 
-            if (random.nextDouble() < 0.01) {
+            if (random.nextDouble() < 0.05) {
                 enemyBullets.add(new Bullet(x, y, player.x, player.y));
                 playSound(shootSound);
             }
         }
 
         private void randomizeDirection() {
-            int SPEED = 7;
+            int SPEED = 10;
             dx = random.nextInt(2 * SPEED + 1) - SPEED;
             dy = random.nextInt(2 * SPEED + 1) - SPEED;
         }
